@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
-import { Search, Loader2, Plus } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 
 interface InputAreaProps {
-  onAddTopic: (query: string) => Promise<void>;
-  isLoading: boolean;
+  onAddTopic: (query: string) => void;
 }
 
-const InputArea: React.FC<InputAreaProps> = ({ onAddTopic, isLoading }) => {
+const InputArea: React.FC<InputAreaProps> = ({ onAddTopic }) => {
   const [query, setQuery] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim() || isLoading) return;
+    if (!query.trim()) return;
     
-    await onAddTopic(query);
-    setQuery('');
+    onAddTopic(query);
+    setQuery(''); // Immediately clear input
   };
 
   return (
@@ -27,20 +26,15 @@ const InputArea: React.FC<InputAreaProps> = ({ onAddTopic, isLoading }) => {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter a topic (e.g., 'The Samurai', 'Bitcoin', 'Jurassic Period')..."
+            placeholder="Enter a topic (e.g., 'The Samurai', 'Bitcoin')..."
             className="w-full bg-transparent text-slate-100 px-4 py-4 focus:outline-none placeholder-slate-500"
-            disabled={isLoading}
           />
           <button
             type="submit"
-            disabled={isLoading || !query.trim()}
+            disabled={!query.trim()}
             className="mr-2 p-2 bg-slate-800 text-white rounded-full hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-            ) : (
-              <Plus className="w-5 h-5 text-cyan-400" />
-            )}
+            <Plus className="w-5 h-5 text-cyan-400" />
           </button>
         </div>
       </form>

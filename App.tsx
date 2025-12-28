@@ -1,48 +1,74 @@
-import React, { useState, useEffect } from 'react';
-import { Topic } from './types';
+import React, { useState } from 'react';
+import { Topic, Category } from './types';
 import { fetchTopicData } from './services/geminiService';
 import InputArea from './components/InputArea';
 import Timeline from './components/Timeline';
 import TopicList from './components/TopicList';
-import { Clock, AlertCircle } from 'lucide-react';
+import { Clock } from 'lucide-react';
+
+const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const App: React.FC = () => {
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleAddTopic = async (query: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Check for duplicate
-      if (topics.some(t => t.name.toLowerCase() === query.toLowerCase())) {
-         setError("This topic is already on the timeline.");
-         setIsLoading(false);
-         return;
-      }
-
-      const newTopic = await fetchTopicData(query);
-      
-      // Functional update to avoid stale state if user double submits somehow, 
-      // though UI blocks it.
-      setTopics(prev => [...prev, newTopic]);
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to fetch topic data. Please try again or check your API key.");
-    } finally {
-      setIsLoading(false);
+  const handleAddTopic = (query: string) => {
+    // 1. Check for duplicates immediately
+    if (topics.some(t => t.name.toLowerCase() === query.toLowerCase())) {
+        // You might want a toast here, but for now we just return
+        return;
     }
+
+    const tempId = generateId();
+
+    // 2. Add placeholder topic (Loading State)
+    const newPlaceholder: Topic = {
+        id: tempId,
+        name: query, // Use query as temporary name
+        status: 'loading',
+        // Default dummy values for required fields during loading
+        category: 'Other' as Category,
+        startYear: 0,
+        endYear: 0,
+        summary: '',
+        sources: []
+    };
+
+    setTopics(prev => [...prev, newPlaceholder]);
+
+    // 3. Trigger Async Fetch (Fire and forget from UI perspective)
+    fetchTopicData(query)
+        .then((data) => {
+            // Update the specific topic with real data
+            setTopics(prev => prev.map(t => {
+                if (t.id === tempId) {
+                    return {
+                        ...t,
+                        ...data,
+                        status: 'success'
+                    };
+                }
+                return t;
+            }));
+        })
+        .catch((err) => {
+            console.error("Error fetching topic:", err);
+            // Update topic to error state
+            setTopics(prev => prev.map(t => {
+                if (t.id === tempId) {
+                    return {
+                        ...t,
+                        status: 'error',
+                        errorMessage: "Failed to find data. Please try again."
+                    };
+                }
+                return t;
+            }));
+        });
   };
 
   const handleRemoveTopic = (id: string) => {
     setTopics(prev => prev.filter(t => t.id !== id));
   };
-
-  // Add an initial example if empty on mount (optional)
-  useEffect(() => {
-    // We could load initial data here if desired
-  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans selection:bg-cyan-500/30">
@@ -65,15 +91,9 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col items-center">
         
-        <InputArea onAddTopic={handleAddTopic} isLoading={isLoading} />
+        {/* Pass simplified handler (no async await needed) */}
+        <InputArea onAddTopic={handleAddTopic} />
         
-        {error && (
-            <div className="mb-6 flex items-center gap-2 text-red-400 bg-red-950/30 border border-red-900/50 px-4 py-3 rounded-lg text-sm">
-                <AlertCircle className="w-4 h-4" />
-                {error}
-            </div>
-        )}
-
         {/* Timeline Visualization */}
         <div className="w-full mb-12">
             <h2 className="text-lg font-semibold text-slate-300 mb-4 px-2 flex items-center gap-2">

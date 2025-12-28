@@ -1,9 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { Topic, Category, Source } from "../types";
 
-// Helper to generate a UUID
-const generateId = () => Math.random().toString(36).substr(2, 9);
-
 const MODEL_NAME = "gemini-3-flash-preview";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -17,7 +14,8 @@ interface RawGeminiResponse {
   isEstimated: boolean;
 }
 
-export const fetchTopicData = async (query: string): Promise<Topic> => {
+// We return a Partial topic because ID and Status are handled by the App component
+export const fetchTopicData = async (query: string): Promise<Omit<Topic, 'id' | 'status'>> => {
   try {
     const prompt = `
       Analyze the topic '${query}'.
@@ -43,8 +41,6 @@ export const fetchTopicData = async (query: string): Promise<Topic> => {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        // Note: We cannot strict enforce JSON mode with tools active in all cases, 
-        // so we will parse the text manually to be safe.
       },
     });
 
@@ -87,7 +83,6 @@ export const fetchTopicData = async (query: string): Promise<Topic> => {
     const category = validCategories.includes(data.category) ? data.category : 'Other';
 
     return {
-      id: generateId(),
       name: data.name,
       category: category,
       startYear: data.startYear,

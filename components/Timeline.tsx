@@ -12,14 +12,19 @@ interface TimelineProps {
 const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
   const currentYear = new Date().getFullYear();
 
+  // Filter for valid topics only
+  const activeTopics = useMemo(() => {
+    return topics.filter(t => t.status === 'success');
+  }, [topics]);
+
   // 1. Calculate Domain (Min Year, Max Year)
   const { minYear, maxYear } = useMemo(() => {
-    if (topics.length === 0) return { minYear: currentYear - 100, maxYear: currentYear };
+    if (activeTopics.length === 0) return { minYear: currentYear - 100, maxYear: currentYear };
     
     let min = Infinity;
     let max = -Infinity;
 
-    topics.forEach(t => {
+    activeTopics.forEach(t => {
       if (t.startYear < min) min = t.startYear;
       const end = t.endYear ?? currentYear;
       if (end > max) max = end;
@@ -30,7 +35,7 @@ const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
     const buffer = range === 0 ? 50 : range * 0.1;
     
     return { minYear: min - buffer, maxYear: max + buffer };
-  }, [topics, currentYear]);
+  }, [activeTopics, currentYear]);
 
   // 2. Setup Scale
   // We map years to percentage (0 to 100)
@@ -48,7 +53,7 @@ const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
     }));
   }, [timeScale]);
 
-  if (topics.length === 0) {
+  if (activeTopics.length === 0) {
     return (
       <div className="w-full h-64 flex items-center justify-center text-slate-500 border border-slate-800 rounded-xl bg-slate-900/50 border-dashed">
         <p>Add a topic to start building your timeline.</p>
@@ -87,7 +92,7 @@ const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
 
         {/* Topics Container */}
         <div className="relative w-full h-full min-w-[700px]"> 
-          {topics.map((topic, index) => {
+          {activeTopics.map((topic, index) => {
             const startPct = timeScale(topic.startYear);
             const endVal = topic.endYear ?? currentYear;
             const endPct = timeScale(endVal);
