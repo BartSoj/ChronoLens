@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { scaleLinear } from 'd3-scale';
 import { Topic } from '../types';
 import { CATEGORY_COLORS, CATEGORY_BORDER_COLORS } from '../constants';
-import { Info, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 interface TimelineProps {
   topics: Topic[];
@@ -59,17 +59,26 @@ const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
   return (
     <div className="relative w-full bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden shadow-inner mb-8">
       {/* Scroll container */}
-      <div className="w-full overflow-x-auto timeline-scroll py-12 px-4 relative min-h-[400px]">
+      <div className="w-full overflow-x-auto timeline-scroll py-16 px-8 relative min-h-[450px]">
         
         {/* Grid Lines & Labels */}
-        <div className="absolute top-0 bottom-0 left-4 right-4 h-full pointer-events-none opacity-20">
+        <div className="absolute top-0 bottom-0 left-8 right-8 h-full pointer-events-none">
             {ticks.map((tick) => (
                 <div 
                     key={tick.value} 
-                    className="absolute top-0 bottom-0 border-l border-slate-400"
+                    className="absolute top-0 bottom-0"
                     style={{ left: `${tick.left}%` }}
                 >
-                    <span className="absolute -top-6 -translate-x-1/2 text-xs font-mono text-slate-400">
+                    {/* Line */}
+                    <div className="absolute inset-y-0 left-0 border-l border-slate-600 opacity-20"></div>
+                    
+                    {/* Top Label */}
+                    <span className="absolute top-4 -translate-x-1/2 text-xs font-mono text-slate-500 font-semibold bg-slate-900/80 px-1 rounded">
+                        {tick.value < 0 ? `${Math.abs(tick.value)} BC` : tick.value}
+                    </span>
+
+                    {/* Bottom Label (for readability on long lists) */}
+                    <span className="absolute bottom-4 -translate-x-1/2 text-xs font-mono text-slate-500 font-semibold bg-slate-900/80 px-1 rounded">
                         {tick.value < 0 ? `${Math.abs(tick.value)} BC` : tick.value}
                     </span>
                 </div>
@@ -77,7 +86,7 @@ const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
         </div>
 
         {/* Topics Container */}
-        <div className="relative w-full h-full min-w-[600px]"> 
+        <div className="relative w-full h-full min-w-[700px]"> 
           {topics.map((topic, index) => {
             const startPct = timeScale(topic.startYear);
             const endVal = topic.endYear ?? currentYear;
@@ -85,7 +94,10 @@ const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
             const widthPct = Math.max(endPct - startPct, 0.5); // Minimum width for visibility
             
             // Stagger vertical positions to reduce overlap
-            const topOffset = (index * 60) % 300 + 40; 
+            const topOffset = (index * 70) % 350 + 60; 
+
+            const startLabel = topic.startYear < 0 ? `${Math.abs(topic.startYear)} BC` : topic.startYear;
+            const endLabel = topic.endYear ? (topic.endYear < 0 ? `${Math.abs(topic.endYear)} BC` : topic.endYear) : 'Now';
 
             return (
               <div
@@ -97,12 +109,17 @@ const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
                   top: `${topOffset}px`,
                 }}
               >
+                {/* Start Year Label (Left) */}
+                <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400 whitespace-nowrap opacity-80 group-hover:opacity-100 transition-opacity">
+                    {startLabel}
+                </div>
+
                 {/* The Bar */}
                 <div 
-                    className={`h-3 rounded-full ${CATEGORY_COLORS[topic.category]} cursor-pointer relative z-10 hover:h-4 transition-all`}
+                    className={`h-4 rounded-full ${CATEGORY_COLORS[topic.category]} cursor-pointer relative z-10 hover:h-5 hover:-translate-y-0.5 transition-all shadow-lg`}
                 >
                     {/* Tooltip / Card */}
-                    <div className="absolute top-6 left-0 w-64 bg-slate-900 border border-slate-700 p-4 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 group-hover:top-8 transition-all pointer-events-none group-hover:pointer-events-auto z-50">
+                    <div className="absolute top-8 left-0 w-72 bg-slate-950 border border-slate-700 p-4 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none group-hover:pointer-events-auto z-50 translate-y-2 group-hover:translate-y-0">
                         <div className="flex justify-between items-start mb-2">
                              <h4 className={`text-sm font-bold ${CATEGORY_BORDER_COLORS[topic.category].replace('border', 'text')}`}>
                                 {topic.name}
@@ -115,8 +132,7 @@ const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
                             </button>
                         </div>
                         <div className="text-xs text-slate-400 mb-2 font-mono">
-                            {topic.startYear < 0 ? `${Math.abs(topic.startYear)} BC` : topic.startYear} – 
-                            {topic.endYear ? (topic.endYear < 0 ? ` ${Math.abs(topic.endYear)} BC` : ` ${topic.endYear}`) : ' Present'}
+                            {startLabel} – {endLabel}
                         </div>
                         <p className="text-xs text-slate-300 leading-relaxed mb-3">
                             {topic.summary}
@@ -139,18 +155,20 @@ const Timeline: React.FC<TimelineProps> = ({ topics, onRemove }) => {
                         )}
                         
                         <div className="mt-2 flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-400 border border-slate-700">
+                            <span className="px-2 py-0.5 rounded-full bg-slate-900 text-[10px] text-slate-400 border border-slate-700">
                                 {topic.category}
                             </span>
-                            {topic.isEstimated && (
-                                <span className="text-[10px] text-yellow-600 italic">Dates estimated</span>
-                            )}
                         </div>
                     </div>
                 </div>
+
+                {/* End Year Label (Right) */}
+                <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-400 whitespace-nowrap opacity-80 group-hover:opacity-100 transition-opacity">
+                    {endLabel}
+                </div>
                 
-                {/* Label always visible on hover or if space permits (simplified for now: always visible small) */}
-                <div className="absolute -top-5 left-0 whitespace-nowrap text-xs text-slate-400 font-medium opacity-70 group-hover:opacity-100 group-hover:text-white transition-opacity">
+                {/* Topic Name Label (Above) */}
+                <div className="absolute -top-6 left-0 whitespace-nowrap text-xs text-slate-300 font-semibold opacity-90 group-hover:text-white transition-colors drop-shadow-md">
                     {topic.name}
                 </div>
               </div>
