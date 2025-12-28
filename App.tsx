@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Topic, Category } from './types';
-import { fetchTopicData } from './services/geminiService';
+import { fetchTopicData, fetchSuggestions } from './services/geminiService';
 import InputArea from './components/InputArea';
 import Timeline from './components/Timeline';
 import TopicList from './components/TopicList';
@@ -10,11 +10,43 @@ const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const App: React.FC = () => {
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
+
+  // Effect to generate suggestions when valid topics change
+  useEffect(() => {
+    const validTopics = topics.filter(t => t.status === 'success');
+    
+    // Don't fetch if we have no valid context or if the last action was just removing everything
+    if (validTopics.length === 0) {
+      setSuggestions([]);
+      return;
+    }
+
+    // Debounce slightly to avoid rapid API calls if multiple things happen at once,
+    // though purely functional is fine for MVP.
+    // We only fetch if the list length implies we have enough context or it changed significantly.
+    // For now, simple trigger:
+    
+    const getSuggestions = async () => {
+      setIsSuggestionsLoading(true);
+      try {
+        const newSuggestions = await fetchSuggestions(validTopics);
+        setSuggestions(newSuggestions);
+      } catch (e) {
+        console.error("Failed to get suggestions", e);
+      } finally {
+        setIsSuggestionsLoading(false);
+      }
+    };
+
+    getSuggestions();
+  }, [topics.length, topics.map(t => t.status).join(',')]); 
+  // Dependency explanation: We trigger when count changes (add/remove) or when a status changes (loading -> success)
 
   const handleAddTopic = (query: string) => {
     // 1. Check for duplicates immediately
     if (topics.some(t => t.name.toLowerCase() === query.toLowerCase())) {
-        // You might want a toast here, but for now we just return
         return;
     }
 
@@ -91,8 +123,12 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col items-center">
         
-        {/* Pass simplified handler (no async await needed) */}
-        <InputArea onAddTopic={handleAddTopic} />
+        {/* Input Area with Suggestions */}
+        <InputArea 
+            onAddTopic={handleAddTopic} 
+            suggestions={suggestions}
+            loadingSuggestions={isSuggestionsLoading}
+        />
         
         {/* Timeline Visualization */}
         <div className="w-full mb-12">

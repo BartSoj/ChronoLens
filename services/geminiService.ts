@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type, SchemaType } from "@google/genai";
 import { Topic, Category, Source } from "../types";
 
 const MODEL_NAME = "gemini-3-flash-preview";
@@ -95,5 +95,51 @@ export const fetchTopicData = async (query: string): Promise<Omit<Topic, 'id' | 
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw error;
+  }
+};
+
+export const fetchSuggestions = async (topics: Topic[]): Promise<string[]> => {
+  if (topics.length === 0) return [];
+
+  // Create a context string from existing topics
+  const context = topics
+    .map(t => `${t.name} (${t.startYear} to ${t.endYear || 'Present'})`)
+    .join(", ");
+
+  const prompt = `
+    The user is building a timeline with the following topics:
+    ${context}
+
+    Your goal is to suggest 4 **broad, thematic topics** or **historical eras** that expand this timeline.
+    
+    CRITICAL GUIDELINES:
+    1. **Generalize**: Identify the underlying theme (e.g. if topics are "Cars" and "Bikes", the theme is "Transportation"). Suggest other major eras in that theme (e.g. "The Railway Age", "Age of Sail", "Commercial Aviation").
+    2. **Broad Scope**: Avoid specific inventions (e.g. "Seatbelt"), specific product models (e.g. "Ford Model T"), or specific years. Prioritize topics that span decades or centuries.
+    3. **Contextual Fit**: Suggestions should be historically significant and comparable in scale to the existing topics.
+    4. **Distinct**: Do not duplicate concepts already on the timeline.
+
+    Return a JSON array of 4 strings (names only).
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.STRING
+          }
+        }
+      }
+    });
+
+    const text = response.text || "[]";
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Error fetching suggestions:", error);
+    return [];
   }
 };
