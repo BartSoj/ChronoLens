@@ -1,0 +1,5 @@
+{
+  "name": "ChronoLens",
+  "description": "A serverless timeline visualization tool powered by Gemini AI. Compare the lifespans of historical events, technologies, and eras with automatic scaling and search-grounded data.",
+  "requestFramePermissions": []
+}
